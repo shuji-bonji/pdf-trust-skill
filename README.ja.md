@@ -63,11 +63,11 @@ PDF family の設計原則は「**決定論的計算（暗号・パース）は 
 
 | プロファイル | 想定文書 | 重点 |
 |---|---|---|
-| [contract](references/contract.md) | 契約書・NDA・発注書 | 署名者の身元、署名時刻の整合、PAdES B-T 以上 |
-| [financial](references/financial.md) | 請求書・決算書・申告書 | 長期検証可能性（LTV・PDF/A）、電子帳簿保存法 |
-| [legal](references/legal.md) | 訴訟資料・法務文書全般 | 証拠性、増分更新の全履歴 |
-| [medical](references/medical.md) | 診療情報提供書・検査報告書 | 最も保守的な判定、PDF/UA |
-| [government](references/government.md) | 行政文書・公共告知 | PDF/A 長期保存、PDF/UA、深い証明書チェーン（GPKI） |
+| [contract](skills/pdf-trust/references/contract.md) | 契約書・NDA・発注書 | 署名者の身元、署名時刻の整合、PAdES B-T 以上 |
+| [financial](skills/pdf-trust/references/financial.md) | 請求書・決算書・申告書 | 長期検証可能性（LTV・PDF/A）、電子帳簿保存法 |
+| [legal](skills/pdf-trust/references/legal.md) | 訴訟資料・法務文書全般 | 証拠性、増分更新の全履歴 |
+| [medical](skills/pdf-trust/references/medical.md) | 診療情報提供書・検査報告書 | 最も保守的な判定、PDF/UA |
+| [government](skills/pdf-trust/references/government.md) | 行政文書・公共告知 | PDF/A 長期保存、PDF/UA、深い証明書チェーン（GPKI） |
 | general | 上記以外 | 基礎検証のみ |
 
 ## 前提となる MCP 群
@@ -95,38 +95,45 @@ PDF family の設計原則は「**決定論的計算（暗号・パース）は 
 
 ## インストール
 
-### A. 手動 clone（Claude Code）
+### A. Marketplace（推奨）
 
-```bash
-mkdir -p ~/.claude/skills
-cd ~/.claude/skills
-git clone https://github.com/shuji-bonji/pdf-trust-skill pdf-trust
-```
-
-### B. Cowork（Claude Desktop）
-
-Skill ディレクトリを `.skill`（zip）にパッケージし、**Settings → Capabilities → Skills** から追加。または Cowork セッションで Claude にこのリポジトリからのインストールを依頼してください。
-
-### C. Marketplace（予定）
-
-[shuji-bonji/claude-plugins](https://github.com/shuji-bonji/claude-plugins) への登録は**予定段階**です。登録後は次の手順で導入できるようになります:
+[shuji-bonji/claude-plugins](https://github.com/shuji-bonji/claude-plugins) に登録済みです:
 
 ```bash
 /plugin marketplace add shuji-bonji/claude-plugins
+/plugin install pdf-verify-mcp@shuji-bonji   # 必須 MCP
 /plugin install pdf-trust@shuji-bonji
 ```
+
+### B. 手動 clone（Claude Code）
+
+Skill 本体は `skills/pdf-trust/` 配下にあるため、そのディレクトリをコピー（または symlink）します:
+
+```bash
+git clone https://github.com/shuji-bonji/pdf-trust-skill
+mkdir -p ~/.claude/skills
+cp -r pdf-trust-skill/skills/pdf-trust ~/.claude/skills/pdf-trust
+```
+
+### C. Cowork（Claude Desktop）
+
+**Settings → Customize → Plugins** に marketplace URL（`https://github.com/shuji-bonji/claude-plugins`）を追加するか、Releases の `.plugin` ファイルをアップロード。または `skills/pdf-trust/` を `.skill`（zip）にパッケージし、**Settings → Capabilities → Skills** から追加してください。
 
 ## ディレクトリ構成
 
 ```
 pdf-trust-skill/
-├── SKILL.md                 # Claude が読み込むメインプレイブック
-├── references/              # ドメイン別プロファイル（必要時にロード）
-│   ├── contract.md
-│   ├── financial.md
-│   ├── legal.md
-│   ├── medical.md
-│   └── government.md
+├── .claude-plugin/
+│   └── plugin.json          # Plugin manifest（marketplace form factor）
+├── skills/
+│   └── pdf-trust/
+│       ├── SKILL.md         # Claude が読み込むメインプレイブック
+│       └── references/      # ドメイン別プロファイル（必要時にロード）
+│           ├── contract.md
+│           ├── financial.md
+│           ├── legal.md
+│           ├── medical.md
+│           └── government.md
 ├── README.md                # 英語版
 ├── README.ja.md             # このファイル
 └── LICENSE                  # MIT

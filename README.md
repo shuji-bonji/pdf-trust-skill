@@ -63,11 +63,11 @@ The PDF family follows a simple rule: **deterministic computation (cryptography,
 
 | Profile | Typical documents | Emphasis |
 |---|---|---|
-| [contract](references/contract.md) | Contracts, NDAs, purchase orders | Signer identity, signing-time consistency, PAdES B-T+ |
-| [financial](references/financial.md) | Invoices, financial statements, tax filings | Long-term verifiability (LTV, PDF/A), Japanese e-bookkeeping law |
-| [legal](references/legal.md) | Litigation materials, legal documents | Evidential strength, full revision history |
-| [medical](references/medical.md) | Referral letters, test reports | Most conservative judgments, PDF/UA |
-| [government](references/government.md) | Administrative documents, public notices | PDF/A archival, PDF/UA, deep cert chains (GPKI) |
+| [contract](skills/pdf-trust/references/contract.md) | Contracts, NDAs, purchase orders | Signer identity, signing-time consistency, PAdES B-T+ |
+| [financial](skills/pdf-trust/references/financial.md) | Invoices, financial statements, tax filings | Long-term verifiability (LTV, PDF/A), Japanese e-bookkeeping law |
+| [legal](skills/pdf-trust/references/legal.md) | Litigation materials, legal documents | Evidential strength, full revision history |
+| [medical](skills/pdf-trust/references/medical.md) | Referral letters, test reports | Most conservative judgments, PDF/UA |
+| [government](skills/pdf-trust/references/government.md) | Administrative documents, public notices | PDF/A archival, PDF/UA, deep cert chains (GPKI) |
 | general | Everything else | Base verification only |
 
 ## Prerequisite MCPs
@@ -95,38 +95,45 @@ Without the optional MCPs the skill degrades gracefully: skipped checks are repo
 
 ## Installation
 
-### A. Manual clone (Claude Code)
+### A. Marketplace (recommended)
 
-```bash
-mkdir -p ~/.claude/skills
-cd ~/.claude/skills
-git clone https://github.com/shuji-bonji/pdf-trust-skill pdf-trust
-```
-
-### B. Cowork (Claude Desktop)
-
-Package the skill directory as a `.skill` (zip) file and add it via **Settings → Capabilities → Skills**, or ask Claude in a Cowork session to install it from this repository.
-
-### C. Marketplace (planned)
-
-Registration in [shuji-bonji/claude-plugins](https://github.com/shuji-bonji/claude-plugins) is planned but **not yet available**. Once registered:
+Registered in [shuji-bonji/claude-plugins](https://github.com/shuji-bonji/claude-plugins):
 
 ```bash
 /plugin marketplace add shuji-bonji/claude-plugins
+/plugin install pdf-verify-mcp@shuji-bonji   # required MCP
 /plugin install pdf-trust@shuji-bonji
 ```
+
+### B. Manual clone (Claude Code)
+
+The skill body lives under `skills/pdf-trust/`, so copy (or symlink) that directory:
+
+```bash
+git clone https://github.com/shuji-bonji/pdf-trust-skill
+mkdir -p ~/.claude/skills
+cp -r pdf-trust-skill/skills/pdf-trust ~/.claude/skills/pdf-trust
+```
+
+### C. Cowork (Claude Desktop)
+
+Add the marketplace URL (`https://github.com/shuji-bonji/claude-plugins`) via **Settings → Customize → Plugins**, or download the `.plugin` file from Releases and upload it. Alternatively, package `skills/pdf-trust/` as a `.skill` (zip) file and add it via **Settings → Capabilities → Skills**.
 
 ## Directory layout
 
 ```
 pdf-trust-skill/
-├── SKILL.md                 # Main playbook loaded by Claude
-├── references/              # Domain profiles (loaded on demand)
-│   ├── contract.md
-│   ├── financial.md
-│   ├── legal.md
-│   ├── medical.md
-│   └── government.md
+├── .claude-plugin/
+│   └── plugin.json          # Plugin manifest (marketplace form factor)
+├── skills/
+│   └── pdf-trust/
+│       ├── SKILL.md         # Main playbook loaded by Claude
+│       └── references/      # Domain profiles (loaded on demand)
+│           ├── contract.md
+│           ├── financial.md
+│           ├── legal.md
+│           ├── medical.md
+│           └── government.md
 ├── README.md                # This file
 ├── README.ja.md             # Japanese version
 └── LICENSE                  # MIT

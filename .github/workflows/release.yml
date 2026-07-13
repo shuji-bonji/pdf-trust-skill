@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify plugin.json version matches tag
+        run: |
+          PLUGIN_VERSION=$(jq -r .version .claude-plugin/plugin.json)
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$PLUGIN_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::plugin.json version ($PLUGIN_VERSION) does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+          echo "Version matches: $PLUGIN_VERSION"
+
+      - name: Build .plugin (zip)
+        id: build
+        run: |
+          ARTIFACT="pdf-trust-${{ steps.version.outputs.version }}.plugin"
+          # Cowork .plugin / Claude Code plugin 共通の form factor (.claude-plugin/plugin.json + skills/)
+          zip -r "$ARTIFACT" \
+            .claude-plugin \
+            skills \
+            LICENSE \
+            README.md
+          echo "artifact=${ARTIFACT}" >> "$GITHUB_OUTPUT"
+          echo "---contents---"
+          unzip -l "$ARTIFACT"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## pdf-trust-skill ${{ steps.version.outputs.tag }}
+
+          Claude Code / Cowork で利用可能な pdf-trust skill のリリースです。
+
+          ### インストール方法
+
+          - **Claude Code (推奨)**: `/plugin marketplace add shuji-bonji/claude-plugins` → `/plugin install pdf-trust@shuji-bonji`
+          - **Cowork (推奨)**: Settings → Customize → Plugins → Marketplace に `https://github.com/shuji-bonji/claude-plugins` を追加
+          - **Cowork (.plugin 直接)**: 下記の `pdf-trust-*.plugin` を Cowork に drag&drop
+          - **手動 clone**: `git clone https://github.com/shuji-bonji/pdf-trust-skill ~/.claude/skills/pdf-trust-skill`
+
+          詳細は [README.md](https://github.com/shuji-bonji/pdf-trust-skill#installation) を参照。
+
+          ### 前提 MCP
+
+          - `@shuji-bonji/pdf-verify-mcp` (**必須**) — `/plugin install pdf-verify-mcp@shuji-bonji` または `npx @shuji-bonji/pdf-verify-mcp`
+          - `@shuji-bonji/pdf-reader-mcp` (任意)
+          - `@shuji-bonji/pdf-spec-mcp` (任意)
+          - houki family MCPs (任意, 法令根拠の参照)
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: ${{ steps.build.outputs.artifact }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}

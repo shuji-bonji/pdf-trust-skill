@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude-plugin/plugin.schema.json",
+  "name": "pdf-trust",
+  "version": "0.1.0",
+  "description": "PDF の信頼性監査オーケストレーション Skill。契約書・請求書・診療文書・申告書・行政文書などの PDF が「本物か・信用してよいか・改ざんされていないか」を、pdf-verify-mcp を軸に pdf-reader-mcp / pdf-spec-mcp / houki 系 MCP を編成して判定し、ドメイン別プロファイル (contract / financial / legal / medical / government) に基づく推奨判定付き Trust Report を返す。",
+  "author": {
+    "name": "shuji-bonji",
+    "email": "bonji@mikuro.jp",
+    "url": "https://github.com/shuji-bonji"
+  },
+  "homepage": "https://github.com/shuji-bonji/pdf-trust-skill",
+  "repository": "https://github.com/shuji-bonji/pdf-trust-skill",
+  "license": "MIT",
+  "keywords": [
+    "pdf",
+    "skill",
+    "trust",
+    "audit",
+    "digital-signature",
+    "signature-verification",
+    "tamper-detection",
+    "pades",
+    "pdf-a",
+    "ltv",
+    "denchoho"
+  ]
+}
