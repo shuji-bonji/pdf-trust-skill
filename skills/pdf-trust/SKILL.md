@@ -5,7 +5,7 @@ description: PDF の信頼性監査オーケストレーション。受け取っ
 
 # pdf-trust — ドメイン別 PDF 信頼性監査
 
-PDF family の trust 層（specs/04-pdf-trust-mcp.md の Skill 実装）。自前の検証ロジックは持たず、
+PDF family の trust 層を担う Skill。自前の検証ロジックは持たず、
 検証は必ず MCP ツールの結果を根拠にする。**構造解析からの推測で真正性を代替しない**こと —
 「本物か」に答えられるのは暗号学的検証だけであり、それは pdf-verify-mcp の仕事。
 
@@ -85,6 +85,12 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 
 - 自己署名のリーフ証明書そのものを trust_anchors に渡すと、チェーンエンジンは
   「not a CA certificate」で untrusted にする（直接信頼リーフは非対応）。CA 証明書を渡すこと
+- untrusted のメッセージは原因を区別できる: 「not a CA certificate」= 渡したアンカーが
+  CA でない、「No valid certificate paths found」= アンカーが署名者チェーンと無関係。
+  後者は正しい CA 証明書の入手を促す
+- indeterminate + 「CMS payload is not valid BER/DER」+ Embedded certificates: 0 は、
+  改ざんではなく署名生成ツール側の不備（証明書の埋め込み漏れ等）のサイン。
+  改ざんと断定せず「検証不能な署名」として human_review_required に送る
 - 署名済み PDF を後から暗号化・再保存すると署名は壊れる（INVALID は改ざんとは限らない —
   再保存の痕跡かもしれない。verify_integrity の増分更新情報と突き合わせる）
 - 増分更新は合法（DSS 追加・連署など）。「署名後に変更あり」= 改ざんではなく、
