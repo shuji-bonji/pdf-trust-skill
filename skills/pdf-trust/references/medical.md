@@ -13,6 +13,8 @@
 
 ## 判定の上書き（最重要）
 
+> **注**: この上書き条件は pdf-verify-mcp v0.7.0 の `evaluate_policy` ルールエンジンにコード化済み。通常は engine の verdict に反映されて返るため、ここを LLM が適用するのは evaluate_policy が使えないフォールバック時のみ。
+
 - **use_with_caution は human_review_required に格上げする** — 「注意して使う」という
   中間状態を患者情報で許容しない。疑わしきは人手レビューへ
 - trust: not_evaluated の場合も human_review_required（身元未評価の診療文書を

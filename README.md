@@ -41,16 +41,16 @@ graph TB
 
 ### Why a Skill and not an MCP server?
 
-The PDF family follows a simple rule: **deterministic computation (cryptography, parsing) belongs in MCP servers; procedures, judgment and knowledge belong in Skills**. Trust auditing is pure orchestration — profiles, ordering, interpretation — so shipping it as a server would only add a process to maintain. `pdf-verify-mcp` does the actual cryptographic work.
+The PDF family follows a simple rule: **deterministic computation (cryptography, parsing, judgment) belongs in MCP servers; procedures, narrative and knowledge belong in Skills**. Since pdf-verify-mcp v0.7.0, even the 4-value verdict is computed by its deterministic `evaluate_policy` rule engine — *the judge is code, the narrative is the LLM*. The Skill orchestrates profiles and ordering, explains why rules fired, and cites legal grounds; it never overrides the verdict.
 
 ## What an audit looks like
 
 1. **Profile selection** — infer the document domain (contract, invoice, medical record, …) and load the matching profile from `references/`
-2. **Base verification** (all files) — `verify_signatures` + `verify_integrity`
-3. **Interpretation** — apply the built-in interpretation table (e.g. *valid with trust `not_evaluated` means cryptographic integrity only, signer identity unverified*)
-4. **Profile checks** — e.g. signing-time cross-check for contracts, PDF/A + PAdES LTV for long-term storage, PDF/UA for medical/government
+2. **Verification & verdict** (all files) — `evaluate_policy` with the chosen profile: it runs `verify_signatures` / `verify_integrity` / `detect_pades_level` (plus `validate_conformance` for preservation profiles) internally and returns the verdict with fired rule IDs. Same file + same profile = same verdict, immune to LLM drift
+3. **Interpretation** — explain each fired rule with the built-in table (e.g. *POL-CAUTION-TRUST-NOT-EVALUATED means cryptographic integrity only, signer identity unverified*), deep-diving with individual tools where needed
+4. **Profile checks** — e.g. signing-time cross-check for contracts, PDF/UA for medical/government (checks `evaluate_policy` doesn't cover)
 5. **Legal grounding** (optional) — fetch the actual statute text via houki MCPs, with source URLs
-6. **Trust Report** — findings table with per-check tool provenance, warnings, and one of four recommendations:
+6. **Trust Report** — findings table with per-check tool provenance, warnings, and the engine's recommendation:
 
 | Recommendation | Meaning |
 |---|---|

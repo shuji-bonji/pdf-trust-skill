@@ -1,6 +1,6 @@
 ---
 name: pdf-trust
-description: PDF の信頼性監査オーケストレーション。受け取った PDF（契約書・請求書・診療文書・申告書・行政文書など）が「本物か・信用してよいか・改ざんされていないか」を、pdf-verify-mcp を軸に pdf-reader-mcp / pdf-spec-mcp / houki 系 MCP を編成して判定し、推奨判定付きの Trust Report を返す。ユーザーが「この PDF は信用できる？」「署名を確認して」「受入監査して」「改ざんされてない？」「電子署名の有効性」「長期保存（電帳法・PDF/A・LTV）できるか」「取引先から届いた PDF のチェック」などに言及したら、単発のツール呼び出しで済ませず必ずこの Skill を使う。複数 PDF の一括監査にも使う。
+description: PDF の信頼性監査オーケストレーション。受け取った PDF（契約書・請求書・診療文書・申告書・行政文書など）が「本物か・信用してよいか・改ざんされていないか」を、pdf-verify-mcp を軸に pdf-reader-mcp / pdf-spec-mcp / houki 系 MCP を編成して監査し、推奨判定付きの Trust Report を返す。4 値判定は pdf-verify-mcp の evaluate_policy（決定論的ルールエンジン）が下し、Skill は発火ルールの解説・推奨アクション・法令根拠を担う。ユーザーが「この PDF は信用できる？」「署名を確認して」「受入監査して」「改ざんされてない？」「電子署名の有効性」「長期保存（電帳法・PDF/A・LTV）できるか」「取引先から届いた PDF のチェック」などに言及したら、単発のツール呼び出しで済ませず必ずこの Skill を使う。複数 PDF の一括監査にも使う。
 ---
 
 # pdf-trust — ドメイン別 PDF 信頼性監査
@@ -14,12 +14,16 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 1. 内容の真偽は判定しない — 判定するのは真正性（原本性・完全性）のみ
 2. 検証結果は技術的事実として返し、解釈・最終判断は利用者に委ねる
 3. 判定の根拠（どのツールの何の結果か）を必ず明示する
+4. **ジャッジはコード、ナラティブは LLM** — 4 値判定は `evaluate_policy`
+   （pdf-verify-mcp v0.7.0+ の決定論的ルールエンジン）が下す。この Skill（LLM）の
+   仕事は firedRules の解説・推奨アクションの文章化・法令根拠の引用であり、
+   判定の上書きではない
 
 ## 前提 MCP
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp | **必須** | 署名検証・改ざん検知・PAdES レベル・PDF/A 検証 |
+| pdf-verify-mcp（**v0.7.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
 | pdf-reader-mcp | 任意 | 署名フィールド構造・PDF/UA タグ検証・メタデータ |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -51,31 +55,45 @@ pdf-verify-mcp が未接続なら監査は成立しない。その旨を伝え�
 - 長期保存が目的に含まれるか（「保存」「アーカイブ」「電帳法」「10年」等）→ Phase 3 の長期保存チェックを追加
 - 暗号化 PDF でパスワードを知っているか → `password` パラメータで渡す
 
-### Phase 1 — 基礎検証（全ファイル一括）
+### Phase 1 — 基礎検証と判定（全ファイル一括）
 
-全対象ファイルに対して実行する:
+全対象ファイルに対して `pdf-verify-mcp: evaluate_policy` を実行する（v0.7.0+）。
+`profile` に Phase 0 で選んだプロファイルを渡し、trust_anchors・password があれば渡す。
+`check_revocation` はプロファイル指定に従う（既定 `embedded`。`online` は外部への
+HTTP アクセスを伴うため、プロファイルが要求する場合もユーザーに一言断ってから）。
 
-1. `pdf-verify-mcp: verify_signatures` — trust_anchors があれば渡す。`check_revocation` は
-   プロファイル指定に従う（既定 `embedded`。`online` は外部への HTTP アクセスを伴うため、
-   プロファイルが要求する場合もユーザーに一言断ってから）
-2. `pdf-verify-mcp: verify_integrity` — 増分更新・署名後変更・DocMDP 違反
+**最終判定（recommendation）は evaluate_policy の `verdict` をそのまま使う。**
+このツールは verify_signatures / verify_integrity / detect_pades_level（長期保存
+プロファイルでは validate_conformance も）を内部で実行し、固定ルール表で決定論的に
+4 値判定する。同じファイル・同じプロファイルなら常に同じ判定になる。
+**LLM（この Skill を実行しているあなた）が verdict を上書きすることは禁止** —
+firedRules / advisories を「なぜこの判定になったか」の解説材料として使うこと。
+文書の本文内容（契約金額・重要度など）を判定材料にしてはならない。
 
-複数ファイルの一括監査では、まずこの 2 つだけを全件に回して問題のあるファイルを特定し、
-Phase 2 以降の深掘りは問題のあるファイルに絞る（全件深掘りは時間と文脈の無駄遣い）。
+接続先の pdf-verify-mcp が古く evaluate_policy が無い場合のみ、旧手順
+（verify_signatures + verify_integrity を個別実行し、後述のフォールバック判定表で
+判定）に縮退し、レポートに「判定: 手動判定（evaluate_policy 未使用）」と明記する。
+
+複数ファイルの一括監査では、まず evaluate_policy だけを全件に回して問題のある
+ファイル（reject / human_review_required）を特定し、Phase 2 以降の深掘りは
+問題のあるファイルに絞る（全件深掘りは時間と文脈の無駄遣い）。
 
 ### Phase 2 — 結果の解釈
 
-解釈を誤ると監査全体が誤導になるため、次の表に従う:
+判定は Phase 1 の evaluate_policy が済ませている。この Phase の仕事は
+**firedRules の各ルールを人間に説明できるようにする**こと。深掘りが必要なときは
+`verify_signatures` / `verify_integrity` を個別に呼んで詳細（cms.error・notes・
+certificatePath 等）を取得する。解釈の背景知識として次の表を使う:
 
-| 観測 | 意味 | 対応 |
+| 観測（firedRules / facts） | 意味 | 解説・推奨アクションに書くこと |
 |---|---|---|
-| verdict: valid + trust: not_evaluated | 暗号学的完全性のみ確認。**署名者の身元は未評価** | レポートに必ずその旨を明記。trust_anchors の提供を促す |
-| verdict: valid + trust: trusted | 完全性 + 署名者身元とも確認 | 最良の状態 |
-| verdict: valid + trust: untrusted | 署名は有効だがチェーンがアンカーに到達しない | 中間 CA 不足か、アンカー相違。detail を確認 |
-| verdict: invalid | ダイジェスト不一致・署名検証失敗・**失効** | 原則 reject。notes で原因を特定 |
-| verdict: indeterminate | 未対応形式 or 検証未完了 | 下記の切り分けへ |
-| 署名なし | 真正性の技術的裏付けなし | プロファイルが署名必須なら不合格 |
-| revocation: unknown | 失効情報が確認できなかった | 「失効していない」とは言えない。online 再試行を検討 |
+| POL-CAUTION-TRUST-NOT-EVALUATED | 暗号学的完全性のみ確認。**署名者の身元は未評価** | 必ずその旨を明記。trust_anchors の提供を促す |
+| （何も発火せず trust_and_use） | 完全性 + 署名者身元 + 失効とも確認 | 最良の状態 |
+| POL-CAUTION-TRUST-UNTRUSTED | 署名は有効だがチェーンがアンカーに到達しない | 中間 CA 不足か、アンカー相違。trust.detail を確認 |
+| POL-REJECT-INVALID / POL-REJECT-REVOKED | ダイジェスト不一致・署名検証失敗・失効 | 原因を verify_signatures の notes で特定して解説 |
+| POL-REVIEW-INDETERMINATE | 未対応形式 or 検証未完了 | 下記の切り分けへ |
+| POL-REVIEW-UNSIGNED-REQUIRED / POL-CAUTION-UNSIGNED | 真正性の技術的裏付けなし | 入手経路など他の補強手段を提案 |
+| POL-CAUTION-REVOCATION-UNKNOWN | 失効情報が確認できなかった | 「失効していない」とは言えない。online 再試行を検討 |
 
 indeterminate の切り分け: cms の error / notes を読む → SubFilter 未対応
 （adbe.pkcs7.sha1 等）か、CMS パース失敗か、暗号化で復号できないか。pdf-reader-mcp が
@@ -99,7 +117,10 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 
 ### Phase 3 — プロファイル別チェック
 
-references/<profile>.md の必須チェックを実行する。長期保存が目的なら追加で:
+references/<profile>.md の必須チェックのうち、evaluate_policy が扱わないもの
+（署名時刻の突き合わせ、PDF/UA 検証、増分更新履歴の詳述など）を実行する。
+PAdES レベルと PDF/A 適合は evaluate_policy が facts / advisories に出している
+（financial / government プロファイルでは PDF/A 検証込み）。深掘りが必要なら:
 
 1. `pdf-verify-mcp: detect_pades_level` — B-LT / B-LTA でなければ、証明書失効後に
    検証不能になるリスクを警告（LTV データの実在検証込みなので「宣言だけの B-LT」も検出される）
@@ -124,15 +145,16 @@ houki 系 MCP のサーバ指示（原文引用・出典 URL 明記）に従う�
 - 対象: <ファイル名（複数なら件数）> / プロファイル: <profile>（<選定根拠>）
 - 実施日時・使用ツール: <MCP 名とバージョン情報が得られれば>
 
-## 判定: <recommendation>
+## 判定: <evaluate_policy の verdict をそのまま>
 
-<1〜3 行の要約>
+<1〜3 行の要約。発火ルールがなぜ発火したかの平易な説明>
 
 ## 根拠
 
 | 検査 | 結果 | 根拠ツール |
 |---|---|---|
-| 署名の暗号学的有効性 | ... | verify_signatures |
+| 総合判定（発火ルール: <POL-... の列挙>） | ... | evaluate_policy |
+| 署名の暗号学的有効性 | ... | evaluate_policy (facts) / verify_signatures |
 | 署名者の身元（信頼チェーン） | ... | verify_signatures (trust) |
 | 失効確認 | ... | verify_signatures (revocation) |
 | 署名後の変更 | ... | verify_integrity |
@@ -150,6 +172,14 @@ houki 系 MCP のサーバ指示（原文引用・出典 URL 明記）に従う�
 
 ### recommendation の判定
 
+**判定は evaluate_policy の verdict をそのまま使う。LLM による上書き禁止。**
+判定表・プロファイル上書き（medical の格上げ等）はすべて verify 側の
+ルールエンジン（`services/policy-engine.ts`）にコード化されており、この Skill 側で
+再現・変更しない。firedRules に無い理由で判定を変えたくなったら、それは
+ルールエンジンの改善要望として pdf-verify-mcp に issue を立てる。
+
+**フォールバック判定表**（evaluate_policy が無い旧バージョンに接続した場合のみ）:
+
 | 判定 | 条件 |
 |---|---|
 | trust_and_use | valid + trusted + 失効なし（good / 失効情報が embedded で確認）+ プロファイル必須チェック全通過 |
@@ -157,11 +187,13 @@ houki 系 MCP のサーバ指示（原文引用・出典 URL 明記）に従う�
 | human_review_required | indeterminate、DocMDP 違反疑い、プロファイル必須チェックの不合格、署名なし（署名必須プロファイル） |
 | reject | invalid（digest 不一致・署名検証失敗・失効確認済み） |
 
-プロファイルの references に、この既定をドメイン事情で上書きする条件が書いてある場合は
-そちらを優先する（例: medical は use_with_caution を human_review_required に格上げ）。
+フォールバック時もプロファイルの references の上書き条件（例: medical は
+use_with_caution を human_review_required に格上げ）を優先し、レポートに
+「判定: 手動判定（evaluate_policy 未使用）」と明記する。
 
 ## やらないこと
 
 - 内容の真偽・法的有効性の最終判断（技術的事実と法令根拠の提示まで）
+- **evaluate_policy の verdict の上書き**（本文内容・重要度・文脈を判定材料にしない）
 - 構造解析（inspect_signatures 等）だけを根拠にした「有効/無効」の判断
 - 記憶からの条文引用（必ず houki 系 MCP で原文を取得）

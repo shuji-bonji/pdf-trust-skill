@@ -24,6 +24,8 @@
 
 ## 判定の上書き
 
+> **注**: この上書き条件は pdf-verify-mcp v0.7.0 の `evaluate_policy` ルールエンジンにコード化済み。通常は engine の verdict に反映されて返るため、ここを LLM が適用するのは evaluate_policy が使えないフォールバック時のみ。
+
 - trust: not_evaluated のままの trust_and_use は出さない（契約書で身元未評価は
   「注意して使う」が上限）
 

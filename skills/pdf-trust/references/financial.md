@@ -26,5 +26,7 @@
 
 ## 判定の上書き
 
+> **注**: この上書き条件は pdf-verify-mcp v0.7.0 の `evaluate_policy` ルールエンジンにコード化済み。通常は engine の verdict に反映されて返るため、ここを LLM が適用するのは evaluate_policy が使えないフォールバック時のみ。
+
 - 署名なし + 電帳法目的 → 判定は use_with_caution を上限にし、「真実性確保措置の確認」を
   推奨アクションに必ず入れる
