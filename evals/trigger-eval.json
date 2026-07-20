@@ -1,0 +1,25 @@
+[
+  {"query": "取引先から契約書のPDFがメールで届いたんだけど、署名欄に印影の画像が貼ってあるだけに見える。これって法的に有効な電子署名なの？ファイルは ~/Downloads/契約書_最終版.pdf", "should_trigger": true},
+  {"query": "経理から回ってきた請求書PDF、金額のところだけフォントが違う気がして気持ち悪い。改ざんされてないか確認する方法ある？", "should_trigger": true},
+  {"query": "電帳法で7年保存しないといけない請求書が200件くらい溜まってる。このまま置いといて後から証拠として使えるのか見てほしい。/Users/bonji/docs/invoices/ 配下", "should_trigger": true},
+  {"query": "この pdf 信用していいやつ？ 知らんとこから届いた", "should_trigger": true},
+  {"query": "取引先の電子契約サービスで結んだNDAなんですが、先方のCA証明書ももらってあります。署名者の身元まで含めてちゃんと検証できますか", "should_trigger": true},
+  {"query": "認証署名がかかってるPDFに後から注釈が足されてるっぽいんですが、これってDocMDP違反になりますか。受け取った側としてどう扱うべきか判断したい", "should_trigger": true},
+  {"query": "病院から届いた診療情報提供書のPDF、原本性が担保されてるか確認したい。転院先に出す前にチェックしておきたくて", "should_trigger": true},
+  {"query": "去年結んだ業務委託契約書のPDF、署名に使われた証明書がもう期限切れてると思うんだけど、今でも署名の有効性って確認できるの？", "should_trigger": true},
+  {"query": "市役所のサイトからダウンロードした告示のPDFが本物かどうか確かめたい。URLは正しいはずなんだけど念のため", "should_trigger": true},
+  {"query": "フリーランスなので取引先ごとに請求書のPDFが届くんですが、月末にまとめて受入チェックする運用にしたいです。まず今月分の12件を見てもらえますか", "should_trigger": true},
+
+  {"query": "月次報告書をPDF/UA準拠で作りたいです。元原稿はMarkdownで書いてあって、アクセシビリティ要件があるので検証まで通したい", "should_trigger": false},
+  {"query": "申請フォームのPDFがあるんだけど、これをPDF/UA準拠にして納品したい。フィールドにラベルが入ってないと言われた", "should_trigger": false},
+  {"query": "電帳法対応で、請求書PDFに元データのXMLを添付したPDF/A-3を作らないといけません。作り方から教えてほしい", "should_trigger": false},
+  {"query": "タグ付きPDFを生成して、ちゃんとveraPDFで通ってることを確認した上で客先に出したい", "should_trigger": false},
+  {"query": "この報告書、品質保証付きでPDFにしてくれる？行政に出すやつなので適当だとまずい", "should_trigger": false},
+
+  {"query": "既存のPDFの中身を読み取って、内容はそのままに構造から作り直したい。今のPDFが古いツールで作られててリフローできないので", "should_trigger": false},
+  {"query": "このPDFをスマホでも読めるようにリフロー対応にしたいんだけど、中のテキストを抜いて組み直すしかないよね？", "should_trigger": false},
+
+  {"query": "スキャンした資料のPDFからテキストだけ抜き出してMarkdownにしたい。OCRはかかってるはず", "should_trigger": false},
+  {"query": "月報のPDFが12個あるので1つに結合してページ番号を振り直したいです", "should_trigger": false},
+  {"query": "パスワードがかかってるPDFがあるんだけど、パスワードは知ってるので解除して普通のPDFにしたい", "should_trigger": false}
+]
