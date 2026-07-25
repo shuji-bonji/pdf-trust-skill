@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude-plugin/plugin.schema.json",
   "name": "pdf-trust",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "PDF の信頼性監査オーケストレーション Skill。契約書・請求書・診療文書・申告書・行政文書などの PDF が「本物か・信用してよいか・改ざんされていないか」を、pdf-verify-mcp を軸に pdf-reader-mcp / pdf-spec-mcp / houki 系 MCP を編成して判定し、ドメイン別プロファイル (contract / financial / legal / medical / government) に基づく推奨判定付き Trust Report を返す。",
   "author": {
     "name": "shuji-bonji",

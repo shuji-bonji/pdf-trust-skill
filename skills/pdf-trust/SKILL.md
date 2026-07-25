@@ -122,8 +122,10 @@ references/<profile>.md の必須チェックのうち、evaluate_policy が扱�
 PAdES レベルと PDF/A 適合は evaluate_policy が facts / advisories に出している
 （financial / government プロファイルでは PDF/A 検証込み）。深掘りが必要なら:
 
-1. `pdf-verify-mcp: detect_pades_level` — B-LT / B-LTA でなければ、証明書失効後に
-   検証不能になるリスクを警告（LTV データの実在検証込みなので「宣言だけの B-LT」も検出される）
+1. `pdf-verify-mcp: detect_pades_level` — 構造が B-LT / B-LTA に一致しなければ、証明書失効後に
+   検証不能になるリスクを警告（LTV データの実在検証込みなので「宣言だけの B-LT」も検出される）。
+   **返り値の `normativeBasis` は常に `"T3"`** — レベルは観測であって適合判定ではないので、
+   レポートには「構造が一致する」と書く（上記「報告するときの言い方」）
 2. `pdf-verify-mcp: validate_conformance` — PDF/A 適合。engine は auto のまま
    （veraPDF があれば権威的結果、なければ内蔵サブセット。どちらだったかをレポートに書く —
    native の「違反なし」は認証ではない）
@@ -133,6 +135,30 @@ PAdES レベルと PDF/A 適合は evaluate_policy が facts / advisories に出
 プロファイルが法令照合を指定する場合、houki 系 MCP で根拠条文を取得する。
 houki 系 MCP のサーバ指示（原文引用・出典 URL 明記）に従うこと。取得できなければ
 「法令根拠: 未取得」と明記（勝手に条文番号を記憶から書かない）。
+
+### 報告するときの言い方 — 規範の 3 層（T1 / T2 / T3）
+
+**同じレポートの中で、項目ごとに言える強さが違う。** 正典は `specs/09-family-scope.md §2`。
+verify の出力は `normativeBasis` フィールドと注記でこれを示してくるので、**それに従って語彙を選ぶ**。
+
+| 層 | 対象 | 書いてよい | 書いてはいけない |
+|---|---|---|---|
+| **T1** | ISO 32000（署名構造・増分更新）・ISO 14289（PDF/UA） | 条文を引用して断定できる | — |
+| **T2** | **PDF/A（ISO 19005）** | 「**veraPDF が COMPLIANT と判定**」 | 「ISO 19005-3 準拠」 |
+| **T3** | **PAdES（ETSI EN 319 142）** | 「**構造が B-LT に一致する**」「LTV データが署名者証明書を覆っている」 | 「**PAdES B-LT に適合**」 |
+
+**T3 が特殊なのは、判定者すら居ないこと。** T2 には veraPDF という第三者検証器があるので
+「誰が判定したか」を名指しできるが、**PAdES には規範も検証器も無く、構造を観測しているのは
+family 自身**である。だから「veraPDF はこう言った」のような逃げ方ができない —
+**「これは観測であって適合判定ではない」と述べるしかない**。
+
+`detect_pades_level` は各レポートに `normativeBasis: "T3"` を返し、markdown では
+レベルより**前**に注記を置く。**その注記をレポートへ運ぶこと**（数字だけ抜き出さない）。
+
+> **なぜここまで言うか**: 受入監査のレポートは、相手に「この文書は PAdES B-LT 準拠です」と
+> 伝えるために使われる。**適合の刻印は、押した者が責任を負う。** ETSI の原文を読んでいないのに
+> 適合と書けば、それは実測していないことを実測したかのように述べたことになる。
+> `pdf-writer-mcp` が「宣言は書けるが適合は作れない」と言うのと、向きが逆の同じ話。
 
 ### Phase 5 — Trust Report 生成
 
@@ -151,18 +177,22 @@ houki 系 MCP のサーバ指示（原文引用・出典 URL 明記）に従う�
 
 ## 根拠
 
-| 検査 | 結果 | 根拠ツール |
-|---|---|---|
-| 総合判定（発火ルール: <POL-... の列挙>） | ... | evaluate_policy |
-| 署名の暗号学的有効性 | ... | evaluate_policy (facts) / verify_signatures |
-| 署名者の身元（信頼チェーン） | ... | verify_signatures (trust) |
-| 失効確認 | ... | verify_signatures (revocation) |
-| 署名後の変更 | ... | verify_integrity |
-| <プロファイル別項目> | ... | ... |
+| 検査 | 結果 | 根拠ツール | 規範根拠 |
+|---|---|---|---|
+| 総合判定（発火ルール: <POL-... の列挙>） | ... | evaluate_policy | — |
+| 署名の暗号学的有効性 | ... | evaluate_policy (facts) / verify_signatures | — |
+| 署名者の身元（信頼チェーン） | ... | verify_signatures (trust) | — |
+| 失効確認 | ... | verify_signatures (revocation) | — |
+| 署名後の変更 | ... | verify_integrity | T1（ISO 32000 §14.4 / §12.8） |
+| PAdES レベル | **構造が <B-T 等> に一致** | detect_pades_level | **T3（観測。ETSI 原文は照合していない）** |
+| PDF/A 適合 | **veraPDF が <COMPLIANT 等> と判定** | validate_conformance | **T2（判定者は veraPDF）** |
+| <プロファイル別項目> | ... | ... | ... |
 
 ## 警告・制限事項
 
 - <trust_anchors 未指定なら必ず: 「valid は暗号学的完全性のみの主張であり署名者の身元は未評価」>
+- <PAdES に言及したなら必ず: 「PAdES レベルは構造からの観測であり、ETSI EN 319 142 の原文照合ではない」>
+- <PDF/A に言及したなら必ず: 「判定者は veraPDF。ISO 19005 の条文は確認していない」>
 - <未実施項目（ツール未接続・取得失敗）>
 
 ## 推奨アクション
