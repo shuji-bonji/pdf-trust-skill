@@ -11,7 +11,11 @@
    証明書の入手をユーザーに促す。`check_revocation: "embedded"` で始め、失効情報が
    unknown なら `online` の実行可否をユーザーに確認
 3. `verify_integrity` — 署名後の増分更新を確認。連署（複数署名）は正常。
-   DocMDP 違反は human_review_required
+   DocMDP 違反は human_review_required。**verify v0.10.0+ なら `revisions[]` の
+   `role` で連署と本文追記を読み分けられる**（署名辞書 + widget + AcroForm が増えていれば連署、
+   注釈やページのコンテンツストリームが書き換わっていれば追記）。
+   契約書では**どちらであるかが争点そのもの**なので、推測でなくこの内訳を根拠にする
+   （手順は SKILL.md「Phase 2.5」）
 4. 署名時刻 — /M・signed attribute・タイムスタンプ genTime を突き合わせ、
    大きな食い違いがあれば注記（契約成立時点の争いに直結するため）
 

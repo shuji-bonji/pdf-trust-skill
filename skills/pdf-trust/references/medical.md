@@ -7,9 +7,15 @@
 
 1. **署名必須** — 未署名の診療文書は human_review_required
 2. `verify_signatures` — trust_anchors（医療機関・HPKI 系 CA）推奨
-3. `verify_integrity` — 署名後変更は原則すべて注記（検査値の書き換えは一文字でも重大）
-4. **PDF/UA** — pdf-reader-mcp `validate_tagged` で検証（verify の identify_conformance は
-   宣言の識別まで）。pdf-reader-mcp 未接続なら「PDF/UA 検証: 未実施」と明記
+3. `verify_integrity` — 署名後変更は原則すべて注記（検査値の書き換えは一文字でも重大）。
+   **verify v0.10.0+ なら `objectChangesAfterLastSignature` でオブジェクト番号・型・役割まで、
+   reader v0.10.0+ の `locate_objects` を併用すればページと矩形まで書く**（SKILL.md「Phase 2.5」）。
+   ただし **`basis: page-content-stream` の矩形はページ全体**であって「書き換わった検査値の位置」ではない —
+   本文の一文字を特定できたかのように書かない
+4. **PDF/UA** — pdf-verify-mcp `validate_conformance`（`flavour: "pdfua-1"`）で検証する。
+   verify の `identify_conformance` は宣言の識別まで。
+   ※ reader の `validate_tagged` は非推奨（verify へ移管済み）。verify 未接続なら
+   「PDF/UA 検証: 未実施」と明記
 
 ## 判定の上書き（最重要）
 

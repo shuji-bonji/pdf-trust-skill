@@ -74,8 +74,8 @@ PDF family の設計原則は「**決定論的計算（暗号・パース・判�
 
 | MCP | 必須 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **必須** | 署名検証・改ざん検知・PAdES レベル・PDF/A 検証 |
-| [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | 任意 | 署名フィールド構造・PDF/UA タグ検証・メタデータ |
+| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **必須** | 署名検証・改ざん検知（**v0.10.0+ はリビジョン間のオブジェクト単位差分も**）・PAdES レベル・PDF/A 検証 |
+| [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | 任意 | 署名フィールド構造・メタデータ。**v0.10.0+ の `locate_objects` で「署名後に変わったオブジェクト」をページと矩形に落とせる**（位置まで報告するなら実質必須） |
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) 等 | 任意 | 法令・通達の一次情報照合 |
 

@@ -8,14 +8,19 @@
 1. `verify_signatures` — trust_anchors 推奨。`check_revocation` は可能なら `online`
    （証拠として使う前提なら失効確認の記録自体に価値がある。実行前にユーザーに確認）
 2. `verify_integrity` — 増分更新の全履歴を報告に含める（どの時点で何が足されたかは
-   証拠評価の材料になる）
+   証拠評価の材料になる）。**verify v0.10.0+ なら `revisions[]` でリビジョンごとの
+   追加・書換・解放オブジェクトまで書ける**（SKILL.md「Phase 2.5」）。reader v0.10.0+ の
+   `locate_objects` を併用してページと矩形まで落とす。**「全履歴」は文字どおりの全件を意味する**ので、
+   `changesTruncated` が立ったら打ち切り件数と `changeCount` を必ず併記し、
+   `revisions: null`（チェーンを辿れなかった）は「変更なし」と書かない
 3. 署名時刻の整合 — /M・signed attribute・タイムスタンプの食い違いは必ず注記
 
 ## 推奨チェック
 
 - `detect_pades_level` — タイムスタンプ（B-T 以上）の有無は「時点証明」の強度に直結
-- pdf-reader-mcp があれば `inspect_signatures` / `validate_metadata` で
-  作成者・作成日時メタデータも収集（参考情報として。メタデータは容易に偽装できる旨を付記）
+- pdf-reader-mcp があれば `inspect_signatures` / `get_metadata` で
+  作成者・作成日時メタデータも収集（参考情報として。メタデータは容易に偽装できる旨を付記）。
+  ※ reader の `validate_metadata` は非推奨
 
 ## 法令根拠（houki-egov）
 

@@ -8,7 +8,8 @@
 1. `verify_signatures` — 請求書等は署名なしも多い（その場合は「真正性の技術的裏付けなし。
    電帳法の真実性確保は別手段（タイムスタンプ・訂正削除防止システム等）に依存」と明記）。
    署名があるのに invalid なら reject
-2. `verify_integrity` — 受領後の改変痕跡の確認
+2. `verify_integrity` — 受領後の改変痕跡の確認（verify v0.10.0+ なら SKILL.md「Phase 2.5」で
+   オブジェクト単位まで落とす。金額欄のウィジェットが署名後に書き換わっていないかは特に見る）
 3. **長期保存チェック（このプロファイルでは常時実施）**:
    - `detect_pades_level` — B-LT / B-LTA でなければ LTV 化を推奨アクションに
    - `validate_conformance` — PDF/A 適合（保存形式として）

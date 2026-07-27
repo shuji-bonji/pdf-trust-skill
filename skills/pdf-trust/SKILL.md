@@ -23,8 +23,8 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.7.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
-| pdf-reader-mcp | 任意 | 署名フィールド構造・PDF/UA タグ検証・メタデータ |
+| pdf-verify-mcp（**v0.10.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入った（下記「署名後の変更の特定」）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
+| pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
 
@@ -112,13 +112,52 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 - 署名済み PDF を後から暗号化・再保存すると署名は壊れる（INVALID は改ざんとは限らない —
   再保存の痕跡かもしれない。verify_integrity の増分更新情報と突き合わせる）
 - 増分更新は合法（DSS 追加・連署など）。「署名後に変更あり」= 改ざんではなく、
-  DocMDP 違反や digest 不一致と組み合わせて判断する
-- linearized PDF はリビジョン数が +1 に見えることがある（ヒューリスティックの限界）
+  DocMDP 違反や digest 不一致と組み合わせて判断する（連署と本文書き換えの読み分けは Phase 2.5）
+- **linearized PDF は `Revisions:` の数字が +1 に見える** — 線形化（ISO 32000-1 Annex F）は
+  1 回の保存で xref を 2 つ持つため。**verify v0.10.0 が併合したのは `revisions[]` の側だけで、
+  `revisionCount` / `incrementalUpdateCount` は今も `startxref` の個数を数えている**。
+  v0.10.0 は代わりに notes へ「線形化なので 1 リビジョンとして数えた」「チェーンの本数と
+  startxref の個数が違う」を出すので、**数字ではなく notes と `revisions[]` を読む**
+
+### Phase 2.5 — 署名後の変更の特定（verify v0.10.0+）
+
+「署名後に N バイト足された」を「何が足されたか」に上げる。**Phase 1 の verdict は動かさない** —
+増分更新は PDF で合法（ISO 32000-2 §7.5.6）なので、これは見るべき場所の特定であって
+改ざんの証明ではない。
+
+1. `pdf-verify-mcp: verify_integrity` の **`revisions[]`** を読む。各リビジョンの
+   `changes[]` に `change`（added / modified / freed）・`type` / `subtype`・`role`（人間向けの役割）・
+   `bookkeeping`・`inObjectStream` が付く。
+   **`objectChangesAfterLastSignature` は「最後の署名以降」だけのショートリスト**なので、
+   連署文書（署名 1 と署名 2 の間に足されたもの）や legal / medical の「全履歴」要求には足りない。
+   **件数を数値で引用するなら `response_format: "json"`** — markdown には `changeCount` /
+   `changesTruncated` が出ない
+2. reader があれば **`pdf-reader-mcp: locate_objects`** にそのオブジェクト番号を渡し、
+   `locations[]` を得る。矩形は PDF 座標系・左下原点・pt・正規化済み（= writer `add_annotation` が
+   そのまま取る形）。**1 オブジェクトが複数ページに載ることがあり、`page` も `rect` も null になりうる**
+3. レポートには **`basis` を必ず転記する**。4 値の意味:
+   `annotation-rect`（注釈自身の `/Rect` = 正確）/ `page-box`（ページの箱 = ページ全体）/
+   `page-content-stream`（**ページ全体**。変更箇所ではない）/ `page-resource`（矩形は存在しない）
+
+**「無い」と「分からない」を混ぜないための区別。どれも空・不在を根拠にしてはいけない**:
+
+| 出てくるもの | 意味 | 書いてはいけないこと |
+|---|---|---|
+| `revisions: null` | xref チェーンを**辿れなかった** | 「変更なし」「差分なし」 |
+| `objectChangesAfterLastSignature: []` | **`revisions: null` のときもこれは空になる**。空 ≠ 署名後に何も書かれていない | 空を「署名後の変更なし」と読む |
+| `changesTruncated: true` | 一覧は 25 件/リビジョンで打ち切り。真の総数は同じリビジョンの `changeCount`（`revisions[]` 側のフィールド） | 列挙した件数を全件として報告する |
+| `inObjectStream: true` | オブジェクトストリームの中にあるので**型が読めていない**（`type` / `role` は null） | 「型なし」を性質として報告する |
+| `basis: "page-content-stream"` / `"page-box"` | 矩形は**ページ全体** | 矩形を「変更された領域」として示す |
+| `locate_objects` の `found: false` | そのオブジェクトは今の文書に存在しない（後のリビジョンで free された = 想定内） | 「異常」「エラー」 |
+
+`bookkeeping: true`（xref ストリーム・オブジェクトストリーム）は**どの保存でも書き換わる**ので、
+本文の変更と並べて数えない。
 
 ### Phase 3 — プロファイル別チェック
 
 references/<profile>.md の必須チェックのうち、evaluate_policy が扱わないもの
-（署名時刻の突き合わせ、PDF/UA 検証、増分更新履歴の詳述など）を実行する。
+（署名時刻の突き合わせ、PDF/UA 検証など）を実行する。**増分更新履歴の詳述は Phase 2.5 で済んでいる**
+（legal / medical プロファイルが要求する「全履歴」「署名後変更の全注記」はそこが担う）。
 PAdES レベルと PDF/A 適合は evaluate_policy が facts / advisories に出している
 （financial / government プロファイルでは PDF/A 検証込み）。深掘りが必要なら:
 
@@ -187,6 +226,21 @@ family 自身**である。だから「veraPDF はこう言った」のような
 | PAdES レベル | **構造が <B-T 等> に一致** | detect_pades_level | **T3（観測。ETSI 原文は照合していない）** |
 | PDF/A 適合 | **veraPDF が <COMPLIANT 等> と判定** | validate_conformance | **T2（判定者は veraPDF）** |
 | <プロファイル別項目> | ... | ... | ... |
+
+<Phase 2.5 を実施したときのみ、次の節を出す。
+ 実施しなかった / できなかったなら、節ごと出さずに理由を「警告・制限事項」に書く —
+ 空の節を置くと「調べて何も無かった」と読まれる>
+
+### 署名後に書かれたオブジェクト
+
+| リビジョン | オブジェクト | 変更 | 役割 | ページ | 矩形 | 根拠 |
+|---|---|---|---|---|---|---|
+| 3 | 27 | added | annotation (Highlight) | 1 | 72, 700, 300, 720 | annotation-rect |
+| 3 | 6 | modified | stream (content, image or embedded data) | 1 | ページ全体 | page-content-stream |
+
+増分更新は PDF で合法（ISO 32000-2 §7.5.6）。**この表は「見るべき場所」であって改ざんの証明ではない。**
+`basis` 列は必ず残す — `page-content-stream` と `page-box` の矩形はページ全体であって変更箇所ではない。
+`changesTruncated` なら「全 <changeCount> 件のうち <n> 件を表示」と明記する（件数は json 出力で取る）。
 
 ## 警告・制限事項
 

@@ -8,12 +8,13 @@
 1. `verify_signatures` — 官職証明書・GPKI 系はチェーンが深いことがある。中間証明書
    不足で untrusted になったら、`check_revocation: "online"`（AIA によるチェーン補完が
    効く）をユーザーに提案
-2. `verify_integrity`
+2. `verify_integrity` — verify v0.10.0+ なら SKILL.md「Phase 2.5」でオブジェクト単位まで落とす
 3. **長期保存チェック（常時実施）**:
    - `validate_conformance` — PDF/A 適合（公文書の保存形式）
    - `detect_pades_level` — B-LTA が理想。未達なら推奨アクションに
-4. **PDF/UA** — pdf-reader-mcp `validate_tagged`（行政文書はアクセシビリティ義務の
-   観点で必須寄り）。未接続なら未実施と明記
+4. **PDF/UA** — pdf-verify-mcp `validate_conformance`（`flavour: "pdfua-1"`。行政文書は
+   アクセシビリティ義務の観点で必須寄り）。※ reader の `validate_tagged` は非推奨（verify へ移管済み）。
+   未接続なら未実施と明記
 
 ## 判定の上書き
 

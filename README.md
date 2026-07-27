@@ -74,8 +74,8 @@ The PDF family follows a simple rule: **deterministic computation (cryptography,
 
 | MCP | Required | Role |
 |---|---|---|
-| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **Yes** | Signature verification, tamper detection, PAdES level, PDF/A validation |
-| [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | No | Signature field structure, PDF/UA tag validation, metadata |
+| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **Yes** | Signature verification, tamper detection (**object-level revision diff from v0.10.0**), PAdES level, PDF/A validation |
+| [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | No | Signature field structure, metadata. **`locate_objects` (v0.10.0+) turns "which objects changed after signing" into a page and a rectangle** — effectively required if the report is to name locations |
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | No | ISO 32000 citations for deviations |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) etc. | No | Japanese statute / tax-ruling grounding |
 
