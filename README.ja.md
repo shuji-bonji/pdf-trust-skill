@@ -79,7 +79,8 @@ PDF family の設計原則は「**決定論的計算（暗号・パース・判�
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) 等 | 任意 | 法令・通達の一次情報照合 |
 
-任意 MCP が未接続でも縮退動作します。実施できなかった検査は黙って省略せず、レポートに「未実施（ツール未接続）」と明記されます。
+`pdf-verify-mcp` は plugin の `dependencies` で宣言しているので、この Skill を install すると
+**自動で一緒に入ります**（Claude Code v2.1.110 以上）。任意 MCP が未接続でも縮退動作します。実施できなかった検査は黙って省略せず、レポートに「未実施（ツール未接続）」と明記されます。
 
 ```jsonc
 // claude_desktop_config.json — 最小構成

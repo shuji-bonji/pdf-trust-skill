@@ -79,7 +79,7 @@ The PDF family follows a simple rule: **deterministic computation (cryptography,
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | No | ISO 32000 citations for deviations |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) etc. | No | Japanese statute / tax-ruling grounding |
 
-Without the optional MCPs the skill degrades gracefully: skipped checks are reported as *not performed (tool not connected)* rather than silently dropped.
+`pdf-verify-mcp` is declared in this plugin's `dependencies`, so installing the Skill installs it too (Claude Code v2.1.110 or later). Without the optional MCPs the skill degrades gracefully: skipped checks are reported as *not performed (tool not connected)* rather than silently dropped.
 
 ```jsonc
 // claude_desktop_config.json — minimal setup
