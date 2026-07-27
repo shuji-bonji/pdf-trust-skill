@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.10.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入った（下記「署名後の変更の特定」）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
+| pdf-verify-mcp（**v0.11.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -167,7 +167,14 @@ PAdES レベルと PDF/A 適合は evaluate_policy が facts / advisories に出
    レポートには「構造が一致する」と書く（上記「報告するときの言い方」）
 2. `pdf-verify-mcp: validate_conformance` — PDF/A 適合。engine は auto のまま
    （veraPDF があれば権威的結果、なければ内蔵サブセット。どちらだったかをレポートに書く —
-   native の「違反なし」は認証ではない）
+   native の「違反なし」は認証ではない）。
+   **flavour は文書の自称に合わせる**（`identify_conformance` が返す part をそのまま使う）。
+   part 4 の文書は `pdfa-4`、**`pdfaid:conformance` が `F` なら `pdfa-4f`**。
+   -4 は **`pdfa-4b` という flavour が存在しない**（conformance level を持たない規格）ので、
+   -3b の癖で `4b` と書かない。**v0.11.0 未満の verify は -4 を `INVALID_FLAVOUR` で弾く** —
+   その場合は「この環境では PDF/A-4 を採点できない」とレポートに書く（黙って -3b で測らない）。
+   **添付を持つ -4 文書を素の `pdfa-4` で測ると `6.9-3`（添付自身が PDF/A でない）で落ちる**が、
+   それは文書の欠陥ではなく**こちらの flavour 選択の誤り**でありうる。自称が `-4f` なら `-4f` で測る
 
 ### Phase 4 — 法令根拠（プロファイル指定時）
 
