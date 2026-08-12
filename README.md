@@ -74,7 +74,7 @@ The PDF family follows a simple rule: **deterministic computation (cryptography,
 
 | MCP | Required | Role |
 |---|---|---|
-| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **Yes** | Signature verification, tamper detection (**object-level revision diff from v0.10.0**), PAdES level, PDF/A validation (**PDF/A-4 from v0.11.0**) |
+| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **Yes** | Signature verification, tamper detection (**object-level revision diff from v0.10.0**), PAdES level, PDF/A validation (**PDF/A-4 from v0.11.0**). **v0.15.0 or later is recommended for the legal / medical profiles**: before it, a `/Prev` link that could not be followed was swallowed and the chain reported as complete, so a document with 8 revisions and 5 signatures came back as having one. A report that promises the *full* revision history cannot be written on an earlier version. |
 | [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | No | Signature field structure, metadata. **`locate_objects` (v0.10.0+) turns "which objects changed after signing" into a page and a rectangle** — effectively required if the report is to name locations |
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | No | ISO 32000 citations for deviations |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) etc. | No | Japanese statute / tax-ruling grounding |

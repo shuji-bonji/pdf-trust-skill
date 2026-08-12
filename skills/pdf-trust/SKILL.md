@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.11.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
+| pdf-verify-mcp（**v0.15.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -132,10 +132,17 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
    連署文書（署名 1 と署名 2 の間に足されたもの）や legal / medical の「全履歴」要求には足りない。
    **件数を数値で引用するなら `response_format: "json"`** — markdown には `changeCount` /
    `changesTruncated` が出ない
-2. reader があれば **`pdf-reader-mcp: locate_objects`** にそのオブジェクト番号を渡し、
+2. **`notes` を必ず読む。`revisions[]` が返ったことは「歩き切れた」ことを意味しない。**
+   チェーンが途中で切れた場合も、最新セクションが読めず古い入口から入った場合も、
+   リストは**短いまま返る**。どちらも `notes` にしか出ない（レポート本体に真偽のフィールドは無い）。
+   **verify v0.15.0 より前は、追えない `/Prev 0` を「前のセクションは無い」として飲み込み、
+   打ち切りを立てずに完全なチェーンとして返していた** — 8 リビジョン 5 署名の実検体が
+   「1 リビジョン」として報告された。**0.15.0 未満で全履歴を要求するプロファイル
+   （legal / medical）を回すときは、リビジョン数を断定せず、版数を上げてから測り直す**
+3. reader があれば **`pdf-reader-mcp: locate_objects`** にそのオブジェクト番号を渡し、
    `locations[]` を得る。矩形は PDF 座標系・左下原点・pt・正規化済み（= writer `add_annotation` が
    そのまま取る形）。**1 オブジェクトが複数ページに載ることがあり、`page` も `rect` も null になりうる**
-3. レポートには **`basis` を必ず転記する**。4 値の意味:
+4. レポートには **`basis` を必ず転記する**。4 値の意味:
    `annotation-rect`（注釈自身の `/Rect` = 正確）/ `page-box`（ページの箱 = ページ全体）/
    `page-content-stream`（**ページ全体**。変更箇所ではない）/ `page-resource`（矩形は存在しない）
 
@@ -144,6 +151,8 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 | 出てくるもの | 意味 | 書いてはいけないこと |
 |---|---|---|
 | `revisions: null` | xref チェーンを**辿れなかった** | 「変更なし」「差分なし」 |
+| notes に「chain ended before reaching the original revision」 | **チェーンが途中で切れた**（壊れた / 巡回する `/Prev`）。`revisions[]` は返るが**そのファイルの全リビジョンではない** | リストの件数を「このファイルのリビジョン数」として報告する |
+| notes に「last "startxref" does not point at a parseable cross-reference section」 | 最新セクションが読めず、**古い入口から入った**。**最後に足されたものはリストに載っていない** | 一覧を「署名後の変更の全部」として報告する |
 | `objectChangesAfterLastSignature: []` | **`revisions: null` のときもこれは空になる**。空 ≠ 署名後に何も書かれていない | 空を「署名後の変更なし」と読む |
 | `changesTruncated: true` | 一覧は 25 件/リビジョンで打ち切り。真の総数は同じリビジョンの `changeCount`（`revisions[]` 側のフィールド） | 列挙した件数を全件として報告する |
 | `inObjectStream: true` | オブジェクトストリームの中にあるので**型が読めていない**（`type` / `role` は null） | 「型なし」を性質として報告する |
