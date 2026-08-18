@@ -74,7 +74,7 @@ PDF family の設計原則は「**決定論的計算（暗号・パース・判�
 
 | MCP | 必須 | 役割 |
 |---|---|---|
-| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **必須** | 署名検証・改ざん検知（**v0.10.0+ はリビジョン間のオブジェクト単位差分も**）・PAdES レベル・PDF/A 検証（**v0.11.0+ は PDF/A-4 も**）。**legal / medical プロファイルは v0.15.0 以降を推奨** — それ以前は追えない `/Prev` を飲み込んでチェーンを完全なものとして返していたため、8 リビジョン 5 署名の文書が「1 リビジョン」と報告された。**全履歴を約束する報告書は旧版では書けない** |
+| [@shuji-bonji/pdf-verify-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-verify-mcp) | **必須** | 署名検証・改ざん検知（**v0.10.0+ はリビジョン間のオブジェクト単位差分も**）・PAdES レベル・PDF/A 検証（**v0.11.0+ は PDF/A-4 も**）。**legal / medical プロファイルは v0.16.0 以降を推奨。** 変わったことが 2 つある。v0.15.0 で、追えない `/Prev` を飲み込まなくなった —— それ以前はチェーンを完全なものとして返していたため、8 リビジョン 5 署名の文書が「1 リビジョン」と報告され、**全履歴を約束する報告書は書けなかった**。v0.16.0 で答えがフィールドになった（`revisionChain: { status, missing }`）—— それまでは信号が `notes` の英文だけで、この Skill は**散文の照合**で全履歴を約束してよいか決めていた。0.15.x でも散文による退避は動き、その手順は `SKILL.md` に書いてある |
 | [@shuji-bonji/pdf-reader-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-reader-mcp) | 任意 | 署名フィールド構造・メタデータ。**v0.10.0+ の `locate_objects` で「署名後に変わったオブジェクト」をページと矩形に落とせる**（位置まで報告するなら実質必須） |
 | [@shuji-bonji/pdf-spec-mcp](https://www.npmjs.com/package/@shuji-bonji/pdf-spec-mcp) | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | [houki-egov-mcp](https://github.com/shuji-bonji/houki-egov-mcp) / [houki-nta-mcp](https://github.com/shuji-bonji/houki-nta-mcp) 等 | 任意 | 法令・通達の一次情報照合 |

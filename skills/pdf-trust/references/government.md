@@ -9,7 +9,7 @@
    不足で untrusted になったら、`check_revocation: "online"`（AIA によるチェーン補完が
    効く）をユーザーに提案
 2. `verify_integrity` — verify v0.10.0+ なら SKILL.md「Phase 2.5」でオブジェクト単位まで落とす。
-   **`notes` の打ち切り確認も同 Phase の 2 のとおり**（歩けなかった範囲は「未確認」と書く）
+   **`revisionChain.status` の確認も同 Phase の 2 のとおり**（歩けなかった範囲は「未確認」と書く）
 3. **長期保存チェック（常時実施）**:
    - `validate_conformance` — PDF/A 適合（公文書の保存形式）
    - `detect_pades_level` — B-LTA が理想。未達なら推奨アクションに
