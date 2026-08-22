@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.16.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
+| pdf-verify-mcp（**v0.17.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -113,11 +113,11 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
   再保存の痕跡かもしれない。verify_integrity の増分更新情報と突き合わせる）
 - 増分更新は合法（DSS 追加・連署など）。「署名後に変更あり」= 改ざんではなく、
   DocMDP 違反や digest 不一致と組み合わせて判断する（連署と本文書き換えの読み分けは Phase 2.5）
-- **linearized PDF は `Revisions:` の数字が +1 に見える** — 線形化（ISO 32000-1 Annex F）は
-  1 回の保存で xref を 2 つ持つため。**verify v0.10.0 が併合したのは `revisions[]` の側だけで、
+- **linearized PDF は `Revisions:` の数字が +1 に見える** — 線形化（ISO 32000-2 Annex F）は
+  1 回の保存で xref を 2 つ持つため。**verify が併合するのは `revisions[]` の側だけで、
   `revisionCount` / `incrementalUpdateCount` は今も `startxref` の個数を数えている**。
-  v0.10.0 は代わりに notes へ「線形化なので 1 リビジョンとして数えた」「チェーンの本数と
-  startxref の個数が違う」を出すので、**数字ではなく notes と `revisions[]` を読む**
+  v0.17.0+ は食い違いに説明が付いているかを **`revisionCountAgreement`** で返すので、
+  **数字を引用する前にそれを読む**（読み方と旧版の退避は Phase 2.5 の 2）
 
 ### Phase 2.5 — 署名後の変更の特定（verify v0.10.0+）
 
@@ -144,8 +144,21 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
    | `partial` | 「辿れた範囲の履歴」。`missing` が `'oldest'`（元版側）/ `'newest'`（最後の追記）を名指す |
    | `unwalkable` | 「未確認」。`revisions` は null。**「変更なし」ではない** |
 
+   🔴 **`revisionCount` を「保存回数」として引用する前に `revisionCountAgreement` を読む**（v0.17.0+）。
+   `revisionCount` は `startxref` の個数、`revisions.length` はチェーンが到達した xref セクション数で、
+   **2 つは合法に食い違う**。このフィールドは食い違いに説明が付いているかを言う。
+
+   | `revisionCountAgreement` | 意味 | 書いてよいこと |
+   |---|---|---|
+   | `status: "agree"` | 2 つの数が一致 | 数をそのまま引用できる |
+   | `status: "accounted"` + `causes: ["linearised"]` | 線形化（1 回の保存が xref を 2 つ持つ）。1 リビジョンに併合済み | 「startxref は N 個だが、線形化のため保存は N−1 回」 |
+   | `status: "accounted"` + `causes: ["chain-incomplete"]` | チェーンが全セクションに到達していない。**どちらの端が欠けたかは `revisionChain.missing`**（ここでは繰り返されない） | 数の差を打ち切りの帰結として報告する |
+   | `status: "unaccounted"` | **歩き切っていて線形化でもないのに数が合わない** = 歩いたチェーンが到達しない `startxref` がファイルにある | 「差分未説明」として human_review 対象に含める |
+
    **版による退避はここだけに置く**（各プロファイルの文書では繰り返さない）:
 
+   - **v0.17.0 未満** — `revisionCountAgreement` は無い。食い違いの説明は notes の英文 1 文だけで、
+     その文は**原因を 2 つ並べてどちらなのかを言っていない**。数字ではなく notes と `revisions[]` を読む
    - **v0.16.0 未満** — `revisionChain` は無い。`notes` に
      「chain ended before reaching the original revision」（= `missing: 'oldest'`）または
      「last "startxref" does not point at a parseable cross-reference section」
@@ -170,6 +183,7 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 | `revisionChain: { status: "partial", missing: ["oldest"] }` | **チェーンが途中で切れた**（壊れた / 巡回する `/Prev`・リビジョン上限）。`revisions[]` は返るが**そのファイルの全リビジョンではない** | リストの件数を「このファイルのリビジョン数」として報告する |
 | `revisionChain: { status: "partial", missing: ["newest"] }` | 最新セクションが読めず、**古い入口から入った**。**最後に足されたものはリストに載っていない** | 一覧を「署名後の変更の全部」として報告する |
 | `revisionChain.missing: []` | **`status` が `complete` のときだけ**空になる。`unwalkable` では `["oldest","newest"]` が入る | 空を見て「何も欠けていない」と読む（`status` を先に見る） |
+| `revisionCountAgreement.status: "unaccounted"` | 数の食い違いに**ファイルから読めた説明が付かない**（線形化でも打ち切りでもない） | 「合法な食い違い」「誤差」として流す |
 | `objectChangesAfterLastSignature: []` | **`revisions: null` のときも、打ち切りで 1 件だけ残ったときも空になる**。空 ≠ 署名後に何も書かれていない | 空を「署名後の変更なし」と読む |
 | `changesTruncated: true` | 一覧は 25 件/リビジョンで打ち切り。真の総数は同じリビジョンの `changeCount`（`revisions[]` 側のフィールド） | 列挙した件数を全件として報告する |
 | `inObjectStream: true` | オブジェクトストリームの中にあるので**型が読めていない**（`type` / `role` は null） | 「型なし」を性質として報告する |
