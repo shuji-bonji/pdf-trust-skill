@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.17.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退 |
+| pdf-verify-mcp（**v0.21.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退。**v0.20.0 で全ツールの報告の先頭に `scope`（判定の射程）が入った** —— 相互参照表を組み直した文書かどうかがここでしか分からない（Phase 1.5）。**v0.20.0 で、条文を名指しする拒否の `code` が `INTERNAL_ERROR` から `PARSE_FAILED` に変わった** —— それ以前は所見と故障が同じ code で返っていた。**v0.21.0 で `verify_signatures` と `detect_pades_level` の JSON の最上位が配列から辞書になった**（`{ scope, signatures: [...] }` / `{ scope, levels: [...] }`）。署名の一覧だけを読んでいると、一覧が不完全であることに気づけないため |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -78,6 +78,27 @@ firedRules / advisories を「なぜこの判定になったか」の解説材�
 ファイル（reject / human_review_required）を特定し、Phase 2 以降の深掘りは
 問題のあるファイルに絞る（全件深掘りは時間と文脈の無駄遣い）。
 
+### Phase 1.5 — 読んだ範囲を確かめる（verify v0.20.0+）
+
+**判定を読む前に `scope` を読む。** v0.20.0 から 5 本、v0.21.0 から 7 本すべての
+ツールが報告の先頭に `scope` を返す。**判定ではなく、判定の射程**である。
+
+見るのは 3 つ。
+
+| `scope` | 意味 | 報告に書くこと |
+|---|---|---|
+| **`reconstructed: true`** | 🔴 **相互参照表は verify が組み直したもの**で、ファイルが持っている表ではない | **必ず書く。**「違反なし」も「署名 N 本」も、**推測した表の上での話**である。全履歴・全署名を約束しない |
+| `chainStop.kind !== 'complete'` | チェーンを最後まで歩けていない（`prev-zero` / `unreadable` / `cyclic` / `malformed`） | 古いリビジョンが読めていない可能性を書く。`verify_integrity` の `revisionChain` と合わせて読む |
+| `encrypted: true` かつ `authenticated: false` | 鍵が導けず、**オブジェクトを 1 つも読んでいない** | 「調べた結果として問題なし」ではない。パスワードの入手を促す |
+
+`recovered: true` は「ライブラリがそのまま読めず、verify が組み立てた」の意味で、
+`refusal` にその理由（条文を名指しする文）が入る。**`refusal` の文面で分岐しない**
+—— normativepdf の版が上がれば言い回しが変わる。分岐は `recovered` と
+`chainStop.kind` で行う。
+
+v0.19.0 以前には `scope` が無い。そのときは「射程は確認していない」と書く
+（「射程に問題は無かった」ではない）。
+
 ### Phase 2 — 結果の解釈
 
 判定は Phase 1 の evaluate_policy が済ませている。この Phase の仕事は
@@ -94,6 +115,21 @@ certificatePath 等）を取得する。解釈の背景知識として次の表�
 | POL-REVIEW-INDETERMINATE | 未対応形式 or 検証未完了 | 下記の切り分けへ |
 | POL-REVIEW-UNSIGNED-REQUIRED / POL-CAUTION-UNSIGNED | 真正性の技術的裏付けなし | 入手経路など他の補強手段を提案 |
 | POL-CAUTION-REVOCATION-UNKNOWN | 失効情報が確認できなかった | 「失効していない」とは言えない。online 再試行を検討 |
+
+🔴 **ツールが `isError` を返したとき、それが「調べられなかった」とは限らない。**
+`code: "PARSE_FAILED"` で、`message` が条文を名指ししている（`§7.5.4` など）なら、
+それは **文書についての所見**である —— その文書は ISO 32000 の構造条文に反していて、
+書かれたとおりには読めない。`suggestion` にもそう書いてある
+（"This is a finding about the file, not a failure of this server"）。
+
+**これを「未実施項目（ツール未接続・取得失敗）」に入れてはいけない。**
+入れると、条文違反が「調べられませんでした」として報告され、
+**壊れた文書ほど無罪になる。** 根拠の表に「構造が条文に反していて読めない
+（§X.Y.Z）」と書き、recommendation に反映する。
+
+`code: "INTERNAL_ERROR"` は本当にサーバ側で落ちたときだけ。こちらは未実施項目でよい。
+（v0.19.0 以前は条文の拒否も `INTERNAL_ERROR` で返っていた。`message` に `§` が
+含まれているかで見分ける。）
 
 indeterminate の切り分け: cms の error / notes を読む → SubFilter 未対応
 （adbe.pkcs7.sha1 等）か、CMS パース失敗か、暗号化で復号できないか。pdf-reader-mcp が
@@ -265,6 +301,7 @@ family 自身**である。だから「veraPDF はこう言った」のような
 
 | 検査 | 結果 | 根拠ツール | 規範根拠 |
 |---|---|---|---|
+| **読んだ範囲** | <scope.reconstructed が true なら「相互参照表は verify が組み直した推測」。chainStop が complete でなければその旨。両方なければ「ファイルの相互参照表どおりに読めた」> | すべてのツールの `scope` | — |
 | 総合判定（発火ルール: <POL-... の列挙>） | ... | evaluate_policy | — |
 | 署名の暗号学的有効性 | ... | evaluate_policy (facts) / verify_signatures | — |
 | 署名者の身元（信頼チェーン） | ... | verify_signatures (trust) | — |
@@ -294,7 +331,8 @@ family 自身**である。だから「veraPDF はこう言った」のような
 - <trust_anchors 未指定なら必ず: 「valid は暗号学的完全性のみの主張であり署名者の身元は未評価」>
 - <PAdES に言及したなら必ず: 「PAdES レベルは構造からの観測であり、ETSI EN 319 142 の原文照合ではない」>
 - <PDF/A に言及したなら必ず: 「判定者は veraPDF。ISO 19005 の条文は確認していない」>
-- <未実施項目（ツール未接続・取得失敗）>
+- <scope.reconstructed が true なら必ず: 「相互参照表は verify が組み直したもので、ファイルが持っているものではない。以下の判定はその表の上での話」>
+- <未実施項目（ツール未接続・取得失敗）。**条文を名指しする PARSE_FAILED はここに入れない** —— それは所見であって未実施ではない>
 
 ## 推奨アクション
 
