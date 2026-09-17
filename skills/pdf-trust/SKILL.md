@@ -61,6 +61,11 @@ pdf-verify-mcp が未接続なら監査は成立しない。その旨を伝え�
 `profile` に Phase 0 で選んだプロファイルを渡し、trust_anchors・password があれば渡す。
 `check_revocation` はプロファイル指定に従う（既定 `embedded`。`online` は外部への
 HTTP アクセスを伴うため、プロファイルが要求する場合もユーザーに一言断ってから）。
+pdf-verify-mcp 0.28.0 以降の失効確認の引数は、次のように扱う。
+
+- `revocation_freshness`（秒、既定 86400）：ユーザーやプロファイルの指定が無ければ
+  **渡さない**（既定の 24 時間を使う）。判定を通すために勝手に広げない
+- `trusted_ocsp_responders`：ユーザーが信頼する OCSP 応答者の証明書を渡したときだけ渡す
 
 **最終判定（recommendation）は evaluate_policy の `verdict` をそのまま使う。**
 このツールは verify_signatures / verify_integrity / detect_pades_level（長期保存
@@ -114,7 +119,7 @@ certificatePath 等）を取得する。解釈の背景知識として次の表�
 | POL-REJECT-INVALID / POL-REJECT-REVOKED | ダイジェスト不一致・署名検証失敗・失効 | 原因を verify_signatures の notes で特定して解説。pdf-verify-mcp 0.27.0 以降、失効（`revoked`）の署名は `verdict: indeterminate` になり、POL-REVIEW-INDETERMINATE も同時に出る。「改ざん」とは書かず、「失効より前の署名だと示す材料が無い」と説明する |
 | POL-REVIEW-INDETERMINATE | 未対応形式 or 検証未完了 | 下記の切り分けへ |
 | POL-REVIEW-UNSIGNED-REQUIRED / POL-CAUTION-UNSIGNED | 真正性の技術的裏付けなし | 入手経路など他の補強手段を提案 |
-| POL-CAUTION-REVOCATION-UNKNOWN | 失効情報が確認できなかった | 「失効していない」とは言えない。online 再試行を検討 |
+| POL-CAUTION-REVOCATION-UNKNOWN | 失効情報が確認できなかった | 「失効していない」とは言えない。verify_signatures の `revocation.detail` で理由を確かめて説明する。埋め込みデータが無い → online 再試行を検討。「too old」（`thisUpdate` が `revocation_freshness` より古い）→ 失効情報の発行時刻（`revocation.thisUpdate`）と検証時刻（`validationTime`）を示す。許容幅を広げるかはユーザーに判断を委ねる。「NOT verified」→ 失効情報の署名を検証できなかった。発行 CA 以外が発行した OCSP 応答者なら、`trusted_ocsp_responders` の指定で解決するか尋ねる。中間 CA の結果は `trust.chainRevocation` にある |
 | POL-CAUTION-REVOKED-AFTER-SIGNING | 署名者証明書は失効しているが、タイムスタンプが失効より前の署名であることを示している（pdf-verify-mcp 0.27.0+） | 署名は有効と説明してよい。ただし証明書は現在失効しているので、この証明書による新しい署名は信用しない旨を添える。`validationTime` と `revocation.revocationTime` を示す |
 
 🔴 **ツールが `isError` を返したとき、それが「調べられなかった」とは限らない。**
