@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.21.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退。**v0.20.0 で全ツールの報告の先頭に `scope`（判定の射程）が入った** —— 相互参照表を組み直した文書かどうかがここでしか分からない（Phase 1.5）。**v0.20.0 で、条文を名指しする拒否の `code` が `INTERNAL_ERROR` から `PARSE_FAILED` に変わった** —— それ以前は所見と故障が同じ code で返っていた。**v0.21.0 で `verify_signatures` と `detect_pades_level` の JSON の最上位が配列から辞書になった**（`{ scope, signatures: [...] }` / `{ scope, levels: [...] }`）。署名の一覧だけを読んでいると、一覧が不完全であることに気づけないため |
+| pdf-verify-mcp（**v0.21.0+ 推奨**） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退。**v0.20.0 で全ツールの報告の先頭に `scope`（判定の射程）が入った** —— 相互参照表を組み直した文書かどうかがここでしか分からない（Phase 1.5）。**v0.20.0 で、条文を名指しする拒否の `code` が `INTERNAL_ERROR` から `PARSE_FAILED` に変わった** —— それ以前は所見と故障が同じ code で返っていた。**v0.21.0 で `verify_signatures` と `detect_pades_level` の JSON の最上位が配列から辞書になった**（`{ scope, signatures: [...] }` / `{ scope, levels: [...] }`）。署名の一覧だけを読んでいると、一覧が不完全であることに気づけないため。**v0.29.0 で JSON の応答を文字数で切らなくなった** — それまでは 25,000 文字で構造の途中で切れ、`isError: false` のまま読めない本文が届いていた。代わりに配列ごとに件数の上限（署名・リビジョン 32、違反・結果 200）が掛かり、切ったときは配列の隣に `xxxTruncated: { returned, total }` が出る（下記 Phase 2.5 の表） |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -228,6 +228,10 @@ indeterminate の切り分け: cms の error / notes を読む → SubFilter 未
 | `revisionCountAgreement.status: "unaccounted"` | 数の食い違いに**ファイルから読めた説明が付かない**（線形化でも打ち切りでもない） | 「合法な食い違い」「誤差」として流す |
 | `objectChangesAfterLastSignature: []` | **`revisions: null` のときも、打ち切りで 1 件だけ残ったときも空になる**。空 ≠ 署名後に何も書かれていない | 空を「署名後の変更なし」と読む |
 | `changesTruncated: true` | 一覧は 25 件/リビジョンで打ち切り。真の総数は同じリビジョンの `changeCount`（`revisions[]` 側のフィールド） | 列挙した件数を全件として報告する |
+| `signaturesTruncated: { returned, total }`（`verify_signatures`、v0.29.0+） | 署名フィールドが 32 件を超えた。一覧に無い署名は**検証していない**（判定が無い） | 一覧の件数を署名数として報告する。一覧に無い署名を「無い」と書く。**`evaluate_policy` は全署名を検証している**ので、判定はそちらの `verdict` で言う |
+| `facts.signaturesTruncated`（`evaluate_policy`、v0.29.0+） | `verdict` は全署名で下されている。facts の一覧だけが 32 件で切れている | facts の件数を署名数として報告する（署名数は `facts.signatureCount`） |
+| `revisionsTruncated`（`verify_integrity`、v0.29.0+） | `revisions[]` は新しい順に 32 件まで。歩いた全体は `revisionCount` / `revisionChain` | 一覧の件数をリビジョン数として報告する |
+| `violationsTruncated` / `resultsTruncated`（`validate_conformance` / `validate_clauses`、v0.29.0+） | 一覧は 200 件まで。`compliant`・`failedRules`・`violations`（数）・`notDecided` は全件で数えてある | 一覧の件数を違反数として報告する |
 | `inObjectStream: true` | オブジェクトストリームの中にあるので**型が読めていない**（`type` / `role` は null） | 「型なし」を性質として報告する |
 | `basis: "page-content-stream"` / `"page-box"` | 矩形は**ページ全体** | 矩形を「変更された領域」として示す |
 | `locate_objects` の `found: false` | そのオブジェクトは今の文書に存在しない（後のリビジョンで free された = 想定内） | 「異常」「エラー」 |
@@ -331,6 +335,7 @@ family 自身**である。だから「veraPDF はこう言った」のような
 増分更新は PDF で合法（ISO 32000-2 §7.5.6）。**この表は「見るべき場所」であって改ざんの証明ではない。**
 `basis` 列は必ず残す — `page-content-stream` と `page-box` の矩形はページ全体であって変更箇所ではない。
 `changesTruncated` なら「全 <changeCount> 件のうち <n> 件を表示」と明記する（件数は json 出力で取る）。
+`signaturesTruncated` なら「全 <total> 件のうち <returned> 件を個別に検証。残りは evaluate_policy の判定にのみ含まれ、個別の結果は無い」と明記する。他の `xxxTruncated` も同じ形で「全 <total> 件のうち <returned> 件を表示」と書く。
 
 ## 警告・制限事項
 
