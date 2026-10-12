@@ -23,7 +23,7 @@ PDF family の trust 層を担う Skill。自前の検証ロジックは持た�
 
 | MCP | 必須/任意 | 役割 |
 |---|---|---|
-| pdf-verify-mcp（**v0.29.0+ 推奨**・出力の形は v0.21.0+ が前提） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退。**v0.20.0 で全ツールの報告の先頭に `scope`（判定の射程）が入った** —— 相互参照表を組み直した文書かどうかがここでしか分からない（Phase 1.5）。**v0.20.0 で、条文を名指しする拒否の `code` が `INTERNAL_ERROR` から `PARSE_FAILED` に変わった** —— それ以前は所見と故障が同じ code で返っていた。**v0.21.0 で `verify_signatures` と `detect_pades_level` の JSON の最上位が配列から辞書になった**（`{ scope, signatures: [...] }` / `{ scope, levels: [...] }`）。署名の一覧だけを読んでいると、一覧が不完全であることに気づけないため。**v0.29.0 で JSON の応答を文字数で切らなくなった** — それまでは 25,000 文字で構造の途中で切れ、`isError: false` のまま読めない本文が届いていた。代わりに配列ごとに件数の上限（署名・リビジョン 32、違反・結果 200）が掛かり、切ったときは配列の隣に `xxxTruncated: { returned, total }` が出る（下記 Phase 2.5 の表）。**v0.27.0 で失効と検証時刻の判定が ISO 32000-2 §12.8.3.4.5・§12.8.3.4.6 に合わせて変わり、v0.28.0 で失効情報の鮮度（`revocation_freshness`）が入った**（下記の失効確認の引数と POL-CAUTION-REVOKED-AFTER-SIGNING の行）。v0.26.x 以前は、タイムスタンプが失効より前を示す署名も `invalid` と返す |
+| pdf-verify-mcp（**v0.29.0+ 推奨**・出力の形は v0.21.0+ が前提） | **必須** | `evaluate_policy` による 4 値判定・署名検証・改ざん検知・PAdES レベル・PDF/A 検証・PDF/UA 検証（`validate_conformance` の `flavour: "pdfua-1"`）。**v0.10.0 で `verify_integrity` にリビジョン間のオブジェクト単位差分**が入り、**v0.11.0 で PDF/A-4（`pdfa-4` / `pdfa-4e` / `pdfa-4f`）が受けられるようになった**（下記「署名後の変更の特定」）。**v0.15.0 で xref チェーンの歩き方が是正され、追えない `/Prev` を完全なチェーンとして飲み込まなくなった** — 全履歴を約束する legal / medical では**この版以降でないと報告書が書けない**（下記 Phase 2.5 の 2）。**v0.16.0 で `verify_integrity` が `revisionChain` を返すようになった** — それまでは打ち切りが `notes` の英文にしか出ておらず、「全履歴を約束してよいか」を**散文の照合で決めていた**。**v0.17.0 で `revisionCountAgreement` が返るようになった** — `revisionCount`（startxref の個数）と `revisions.length` の食い違いに説明が付いているかをフィールドで読める（下記 Phase 2.5 の 2）。v0.7.0〜0.9 は差分が無いだけで **verdict は同一**（ルール表は不変。advisory は 0.7.1 / 0.8.0 で追加）。v0.7.0 未満は evaluate_policy が無くフォールバック手動判定に縮退。**v0.20.0 で全ツールの報告の先頭に `scope`（判定の射程）が入った** —— 相互参照表を組み直した文書かどうかがここでしか分からない（Phase 1.5）。**v0.20.0 で、条文を名指しする拒否の `code` が `INTERNAL_ERROR` から `PARSE_FAILED` に変わった** —— それ以前は所見と故障が同じ code で返っていた。**v0.21.0 で `verify_signatures` と `detect_pades_level` の JSON の最上位が配列から辞書になった**（`{ scope, signatures: [...] }` / `{ scope, levels: [...] }`）。署名の一覧だけを読んでいると、一覧が不完全であることに気づけないため。**v0.29.0 で JSON の応答を文字数で切らなくなった** — それまでは 25,000 文字で構造の途中で切れ、`isError: false` のまま読めない本文が届いていた。代わりに配列ごとに件数の上限（署名・リビジョン 32、違反・結果 200）が掛かり、切ったときは配列の隣に `xxxTruncated: { returned, total }` が出る（下記 Phase 2.5 の表）。**v0.27.0 で失効と検証時刻の判定が ISO 32000-2 §12.8.3.4.5・§12.8.3.4.6 に合わせて変わり、v0.28.0 で失効情報の鮮度（`revocation_freshness`）が入った**（下記の失効確認の引数と POL-CAUTION-REVOKED-AFTER-SIGNING の行）。v0.26.x 以前は、タイムスタンプが失効より前を示す署名も `invalid` と返す。**v0.30.0 で `evaluate_policy` の `facts.content`（内容目録）と 2 つのルール `POL-CAUTION-REDACT-PENDING` / `POL-CAUTION-ACTIVE-CONTENT` が入った** —— Redact 注釈の残存（黒塗り未完了）と、文書が持つ動くアクション（JavaScript / Launch / GoToR / SubmitForm）が判定に乗る（下記 Phase 2 の表）。それ以前の版ではこの 2 つは判定に入らず、`facts.content` も無い |
 | pdf-reader-mcp（**v0.10.0+ 推奨**） | 任意（**位置特定が要るなら実質必須**） | 署名フィールド構造・メタデータ。**v0.10.0 の `locate_objects`** で「変わったオブジェクト」を「ページ + 矩形」に落とせる。※ PDF/UA 検証は verify の `validate_conformance` へ移管済み（reader の `validate_tagged` / `validate_metadata` は非推奨） |
 | pdf-spec-mcp | 任意 | 逸脱時の ISO 32000 根拠引用 |
 | houki-egov / houki-nta / tax-law / labor-law | 任意 | 法令根拠（プロファイルが指定） |
@@ -121,6 +121,8 @@ certificatePath 等）を取得する。解釈の背景知識として次の表�
 | POL-REVIEW-UNSIGNED-REQUIRED / POL-CAUTION-UNSIGNED | 真正性の技術的裏付けなし | 入手経路など他の補強手段を提案 |
 | POL-CAUTION-REVOCATION-UNKNOWN | 失効情報が確認できなかった | 「失効していない」とは言えない。verify_signatures の `revocation.detail` で理由を確かめて説明する。埋め込みデータが無い → online 再試行を検討。「too old」（`thisUpdate` が `revocation_freshness` より古い）→ 失効情報の発行時刻（`revocation.thisUpdate`）と検証時刻（`validationTime`）を示す。許容幅を広げるかはユーザーに判断を委ねる。「NOT verified」→ 失効情報の署名を検証できなかった。発行 CA 以外が発行した OCSP 応答者なら、`trusted_ocsp_responders` の指定で解決するか尋ねる。中間 CA の結果は `trust.chainRevocation` にある |
 | POL-CAUTION-REVOKED-AFTER-SIGNING | 署名者証明書は失効しているが、タイムスタンプが失効より前の署名であることを示している（pdf-verify-mcp 0.27.0+） | 署名は有効と説明してよい。ただし証明書は現在失効しているので、この証明書による新しい署名は信用しない旨を添える。`validationTime` と `revocation.revocationTime` を示す |
+| POL-CAUTION-REDACT-PENDING（pdf-verify-mcp 0.30.0+） | `/Subtype /Redact` の注釈がファイルに残っている。ISO 32000-2 §12.5.6.23 により、黒塗りを**適用**すると注釈も対象の内容も取り除かれる。残っているのは、黒塗りが途中で止まっているということ | 「黒塗りの作業が完了していない。注釈が示す内容はファイルに残っており、取り出せる」と書く。本数は `facts.content.redactAnnotations`、overlay が用意されていた本数は `redactWithOverlay`。黒塗り済みとして届いた文書なら、**適用した版の再送**を求める。個人情報を含む文書は適用済みの版が届くまで受入を保留する。🔴 **残っている内容を抽出・表示しない**（露出の経路を増やさない）。黒い矩形の見た目から黒塗りの有無を推定しない — 描画と Redact 注釈は別物 |
+| POL-CAUTION-ACTIVE-CONTENT（pdf-verify-mcp 0.30.0+） | ECMAScript（`/S /JavaScript`）・Launch・リモート Go-To（GoToR / GoToE）・SubmitForm / ImportData のアクションが文書にある。`facts.content.actions` に ISO 32000-2 §12.8.7 Table 264 の数え方で件数が出る。理由文に「開いたときに走る」とあれば、カタログに `/OpenAction` か `/AA` がある | 種類ごとの件数を転記する。「何をするスクリプトか」は verify も読んでいないので、**書かない**（言えるのは「ある」「何バイトある」まで）。Launch はアプリケーションの起動、SubmitForm はデータの外部送信なので、受入前に送付元へ用途を確認する。URI アクションは判定を変えず、advisory にホストが列挙される — リンク先のホストを転記する |
 
 🔴 **ツールが `isError` を返したとき、それが「調べられなかった」とは限らない。**
 `code: "PARSE_FAILED"` で、`message` が条文を名指ししている（`§7.5.4` など）なら、
@@ -319,6 +321,7 @@ family 自身**である。だから「veraPDF はこう言った」のような
 | 署名後の変更 | ... | verify_integrity | T1（ISO 32000 §14.4 / §12.8） |
 | PAdES レベル | **構造が <B-T 等> に一致** | detect_pades_level | **T3（観測。ETSI 原文は照合していない）** |
 | PDF/A 適合 | **veraPDF が <COMPLIANT 等> と判定** | validate_conformance | **T2（判定者は veraPDF）** |
+| 内容目録（動くもの・途中のもの） | <`facts.content` から転記: Redact 注釈 N 本 / JavaScript N 件 (N B) / Launch N / GoToR N / SubmitForm N / URI N（ホスト …）。`content` が `null` なら「数えていない」と書く。0 とは書かない> | evaluate_policy (facts.content) | T1（ISO 32000-2 §12.5.6.23 / §12.8.7） |
 | <プロファイル別項目> | ... | ... | ... |
 
 <Phase 2.5 を実施したときのみ、次の節を出す。
@@ -344,10 +347,14 @@ family 自身**である。だから「veraPDF はこう言った」のような
 - <PDF/A に言及したなら必ず: 「判定者は veraPDF。ISO 19005 の条文は確認していない」>
 - <scope.reconstructed が true なら必ず: 「相互参照表は verify が組み直したもので、ファイルが持っているものではない。以下の判定はその表の上での話」>
 - <未実施項目（ツール未接続・取得失敗）。**条文を名指しする PARSE_FAILED はここに入れない** —— それは所見であって未実施ではない>
+- <Redact 注釈が残っていたなら必ず: 「黒塗りの対象だった内容はファイル内に残っている。本レポートはその内容を取り出していない」>
+- <JavaScript があったなら必ず: 「スクリプトの中身は読んでいない。何をするかは言えない」>
 
 ## 推奨アクション
 
 - <trust_anchors の入手、online 失効確認、LTV 化、人手レビュー対象箇所など>
+- <Redact 注釈が残っていたなら: 送付元に黒塗りを適用した版の再送を求める。個人情報を含む文書は、適用済みの版が届くまで受入を保留する>
+- <Launch / SubmitForm があったなら: 送付元に用途を確認する。確認が取れるまで、そのアクションを実行する閲覧環境で開かない>
 ```
 
 ### recommendation の判定
@@ -377,3 +384,5 @@ use_with_caution を human_review_required に格上げ）を優先し、レポ�
 - **evaluate_policy の verdict の上書き**（本文内容・重要度・文脈を判定材料にしない）
 - 構造解析（inspect_signatures 等）だけを根拠にした「有効/無効」の判断
 - 記憶からの条文引用（必ず houki 系 MCP で原文を取得）
+- **Redact 注釈が覆っている内容の抽出・表示**（残存の事実と本数を報告するまで。内容を出すと、黒塗りが未完了であることを報告する行為そのものが露出の経路になる）
+- 黒い矩形の描画だけを根拠にした「黒塗り済み / 未済」の判断（Redact 注釈の有無で言う）
