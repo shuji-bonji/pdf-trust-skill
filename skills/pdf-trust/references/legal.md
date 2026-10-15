@@ -27,7 +27,7 @@
 - `detect_pades_level` — タイムスタンプ（B-T 以上）の有無は「時点証明」の強度に直結
 - pdf-reader-mcp があれば `inspect_signatures` / `get_metadata` で
   作成者・作成日時メタデータも収集（参考情報として。メタデータは容易に偽装できる旨を付記）。
-  ※ reader の `validate_metadata` は非推奨
+  ※ reader の `validate_metadata` は 0.17.0 で削除済み
 
 ## 法令根拠（houki-egov）
 

@@ -14,7 +14,7 @@
    - `validate_conformance` — PDF/A 適合（公文書の保存形式）
    - `detect_pades_level` — B-LTA が理想。未達なら推奨アクションに
 4. **PDF/UA** — pdf-verify-mcp `validate_conformance`（`flavour: "pdfua-1"`。行政文書は
-   アクセシビリティ義務の観点で必須寄り）。※ reader の `validate_tagged` は非推奨（verify へ移管済み）。
+   アクセシビリティ義務の観点で必須寄り）。※ reader の `validate_tagged` は 0.17.0 で削除済み（verify の `validate_conformance` へ移管）。
    未接続なら未実施と明記
 
 ## 判定の上書き

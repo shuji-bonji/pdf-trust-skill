@@ -19,7 +19,7 @@
    患者に及ぶので、歩けなかった範囲は「未確認」として明示する。
 4. **PDF/UA** — pdf-verify-mcp `validate_conformance`（`flavour: "pdfua-1"`）で検証する。
    verify の `identify_conformance` は宣言の識別まで。
-   ※ reader の `validate_tagged` は非推奨（verify へ移管済み）。verify 未接続なら
+   ※ reader の `validate_tagged` は 0.17.0 で削除済み（verify の `validate_conformance` へ移管）。verify 未接続なら
    「PDF/UA 検証: 未実施」と明記
 
 ## 判定の上書き（最重要）
